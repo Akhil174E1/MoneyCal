@@ -1,0 +1,58 @@
+name: Build and Deploy Spring Boot
+
+on:
+  push:
+    branches:
+      - Test
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1          # Change if required
+  ROLE_ARN: arn:aws:iam::565105396926:oidc-provider/token.actions.githubusercontent.com
+  INSTANCE_ID: i-0b48379cdfc3d0984
+  S3_BUCKET: moneycal-deployments
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build Project
+        run: mvn clean package -DskipTests
+
+      - name: Configure AWS Credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.ROLE_ARN }}
+
+      - name: Upload JAR to S3
+        run: |
+          aws s3 cp target/*.jar s3://${{ env.S3_BUCKET }}/app.jar
+
+      - name: Deploy to EC2 using SSM
+        run: |
+          aws ssm send-command \
+          --instance-ids ${{ env.INSTANCE_ID }} \
+          --document-name "AWS-RunShellScript" \
+          --parameters 'commands=[
+          "sudo pkill -f app.jar || true",
+          "aws s3 cp s3://'${{ env.S3_BUCKET }}'/app.jar /home/ubuntu/app.jar",
+          "nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &"
+          ]' \
+          --region ${{ env.AWS_REGION }}
