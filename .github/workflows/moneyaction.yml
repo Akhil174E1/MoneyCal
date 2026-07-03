@@ -11,8 +11,8 @@ permissions:
 
 env:
   AWS_REGION: us-east-1          # Change if required
-  ROLE_ARN: arn:aws:iam::565105396926:role/OpenIdrole
-  INSTANCE_ID: i-0b48379cdfc3d0984
+  ROLE_ARN: arn:aws:iam::068264331860:role/openIdc
+  INSTANCE_ID: i-020d7ad93951b2095
   S3_BUCKET: moneycal-deployments
 
 jobs:
