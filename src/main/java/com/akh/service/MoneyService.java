@@ -3,6 +3,8 @@ package com.akh.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +13,8 @@ import com.akh.util.MoneyVo;
 
 @Service
 public class MoneyService {
+	private static final Logger logger =
+            LoggerFactory.getLogger(MoneyService.class);
 	
 	@Autowired
 	public MoneyDao moneyDao;
@@ -23,6 +27,7 @@ public class MoneyService {
 	
 	public String insertDetails(MoneyVo moneyVo) {
 		moneyDao.save(moneyVo);
+		logger.info("Money Service ::::::inside insertDetails::::"+moneyVo.toString());
 		return moneyVo.getId()+" : inserted successfully..";
 	}
 	
@@ -36,6 +41,7 @@ public class MoneyService {
 		Optional<MoneyVo> m = moneyDao.findById(id);
 		if(m.isPresent()) {
 			moneyDao.save(moneyVo);
+			logger.info("Money Service ::::::inside updateDetails : id: "+id);
 			return moneyVo.getId()+" : Updated successfully..";
 		}
 		return moneyVo.getId()+" : Not found ";
@@ -43,6 +49,7 @@ public class MoneyService {
 	}
 	
 	public String deleteDetails(Integer id) {
+		logger.info("Money Service ::::::inside deleteDetails : id: "+id);
 		Optional<MoneyVo> m = moneyDao.findById(id);
 		if(m.isPresent()) {
 			moneyDao.deleteById(id);
