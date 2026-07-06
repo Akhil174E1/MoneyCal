@@ -11,9 +11,9 @@ permissions:
 
 env:
   AWS_REGION: us-east-1          # Change if required
-  ROLE_ARN: arn:aws:iam::068264331860:role/openIdc
-  INSTANCE_ID: i-020d7ad93951b2095
-  S3_BUCKET: moneycal-deployments
+  ROLE_ARN: arn:aws:iam::211125594036:role/calculator-app-github-deploy-role
+  INSTANCE_ID: "i-0b0ac0768cb3d0741 i-0ca78998ae1401d42"
+  S3_BUCKET: calculator-app-deploy-artifacts-211125594036
 
 jobs:
   deploy:
