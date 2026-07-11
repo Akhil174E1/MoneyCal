@@ -20,6 +20,7 @@ public class MoneyVo {
 	private Integer Id;
 	private String reason;
 	private float amount;
+	private String category;
 	@CreationTimestamp
 	private Date  date;
 	public Integer getId() {
@@ -40,6 +41,12 @@ public class MoneyVo {
 	}
 	public void setAmount(float amount) {
 		this.amount = amount;
+	}
+	public String getCategory() {
+		return category;
+	}
+	public void setCategory(String category) {
+		this.category = category;
 	}
 	public Date getDate() {
 		return date;

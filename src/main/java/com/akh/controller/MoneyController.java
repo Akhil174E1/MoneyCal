@@ -37,7 +37,7 @@ public class MoneyController {
 
 	@PostMapping("/login")
 	public ResponseEntity<String> login(@RequestBody Map<String, String> body) {
-		logger.info("MoneyController::::: Inside login method:::::");
+		
 	    String result = authService.login(body.get("email"), body.get("password"));
 	    
 	    if (result.equals("Login successful")) {
