@@ -10,18 +10,15 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: us-east-1          # Change if required
+  AWS_REGION: us-east-1
   ROLE_ARN: arn:aws:iam::211125594036:role/calculator-app-github-deploy-role
-  INSTANCE_ID: "i-0b0ac0768cb3d0741 i-0ca78998ae1401d42"
   S3_BUCKET: calculator-app-deploy-artifacts-211125594036
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Source
         uses: actions/checkout@v4
 
@@ -45,14 +42,10 @@ jobs:
         run: |
           aws s3 cp target/*.jar s3://${{ env.S3_BUCKET }}/app.jar
 
-      - name: Deploy to EC2 using SSM
+      - name: Deploy to EC2 via SSM
         run: |
           aws ssm send-command \
-          --instance-ids ${{ env.INSTANCE_ID }} \
-          --document-name "AWS-RunShellScript" \
-          --parameters 'commands=[
-          "sudo pkill -f app.jar || true",
-          "aws s3 cp s3://'${{ env.S3_BUCKET }}'/app.jar /home/ubuntu/app.jar",
-          "nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &"
-          ]' \
-          --region ${{ env.AWS_REGION }}
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Name,Values=calculator-app-frontend-01,calculator-app-frontend-02" \
+            --parameters '{"commands":["set -euo pipefail","mkdir -p /opt/app","aws s3 cp s3://${{ env.S3_BUCKET }}/app.jar /opt/app/app.jar","systemctl daemon-reload","systemctl enable calculator-app.service","systemctl restart calculator-app.service","systemctl is-active --quiet calculator-app.service"]}' \
+            --region ${{ env.AWS_REGION }}
