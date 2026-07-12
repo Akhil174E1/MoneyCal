@@ -5,6 +5,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.akh.service.AuthService;
 import com.akh.service.MoneyService;
 import com.akh.util.MoneyVo;
+import com.akh.util.User;
 
 import jakarta.websocket.server.PathParam;
 
@@ -38,12 +40,12 @@ public class MoneyController {
 	@PostMapping("/login")
 	public ResponseEntity<String> login(@RequestBody Map<String, String> body) {
 		
-	    String result = authService.login(body.get("email"), body.get("password"));
+	    User result = authService.login(body.get("email"), body.get("password"));
 	    
-	    if (result.equals("Login successful")) {
-	        return ResponseEntity.ok(result); 
+	    if (result!=null) {
+	        return new ResponseEntity<String>("Valid",HttpStatus.OK);
 	    } else {
-	        return ResponseEntity.status(401).body(result); 
+	        return new ResponseEntity<String>("NotValid",HttpStatus.BAD_REQUEST); 
 	    }
 	}
 
@@ -60,12 +62,14 @@ public class MoneyController {
 	
 	@PostMapping("/postApi")
 	public String insertMoneyDetails(@RequestBody MoneyVo moneyVo) {
+		logger.info("MoneyController ::::Money :::"+moneyVo.toString());
 		String res = moneyService.insertDetails(moneyVo);
+		logger.info("MoneyController ::::details :::"+res);
 		return res;
 	}
 	@GetMapping("/getTotal")
-	public Float getTotalAmount(){
-		Float m = moneyService.totalAmount();
+	public Float getTotalAmount(User user){
+		Float m = moneyService.totalAmount(user);
 		return m;
 	}
 	

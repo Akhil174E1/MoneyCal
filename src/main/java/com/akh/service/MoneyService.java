@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.akh.dao.MoneyDao;
 import com.akh.util.MoneyVo;
+import com.akh.util.User;
 
 @Service
 public class MoneyService {
@@ -20,8 +21,8 @@ public class MoneyService {
 	public MoneyDao moneyDao;
 	
 	
-	public List<MoneyVo> getAllDetails(){
-		List<MoneyVo> m = moneyDao.findAll();
+	public List<MoneyVo> getAllDetails(User user){
+		List<MoneyVo> m = moneyDao.findByUser(user);
 		return m;
 	}
 	
@@ -31,8 +32,8 @@ public class MoneyService {
 		return moneyVo.getId()+" : inserted successfully..";
 	}
 	
-	public Float totalAmount() {
-		Float total = moneyDao.getTotalAmount();
+	public Float totalAmount(User user) {
+		Float total = moneyDao.getTotalAmountByUserId(user.getId());
 		return total != null ? total : 0f;
 	}
 	
@@ -58,5 +59,6 @@ public class MoneyService {
 		return id+" : Not found ";
 		
 	}
+	
 
 }

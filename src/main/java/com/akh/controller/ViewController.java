@@ -14,185 +14,169 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.akh.service.AuthService;
 import com.akh.service.MoneyService;
 import com.akh.util.MoneyVo;
+import com.akh.util.User;
 
 import jakarta.servlet.http.HttpSession;
 
 @Controller
 public class ViewController {
 
-    @Autowired
-    private AuthService authService;
+	@Autowired
+	private AuthService authService;
 
-    @Autowired
-    private MoneyService moneyService;
+	@Autowired
+	private MoneyService moneyService;
 
-    @GetMapping("/")
-    public String homePage() {
-        return "redirect:/login";
-    }
+	@GetMapping("/")
+	public String homePage() {
+		return "redirect:/login";
+	}
 
-    @GetMapping("/login")
-    public String loginPage(HttpSession session) {
+	@GetMapping("/login")
+	public String loginPage(HttpSession session) {
 
-        // If already logged in, go directly to dashboard
-        if (session.getAttribute("loggedInUser") != null) {
-            return "redirect:/dashboard";
-        }
+		// If already logged in, go directly to dashboard
+		if (session.getAttribute("loggedInUser") != null) {
+			return "redirect:/dashboard";
+		}
 
-        return "login";
-    }
+		return "login";
+	}
 
-    @GetMapping("/signup")
-    public String signupPage(HttpSession session) {
+	@GetMapping("/signup")
+	public String signupPage(HttpSession session) {
 
-        // If already logged in, go directly to dashboard
-        if (session.getAttribute("loggedInUser") != null) {
-            return "redirect:/dashboard";
-        }
+		// If already logged in, go directly to dashboard
+		if (session.getAttribute("loggedInUser") != null) {
+			return "redirect:/dashboard";
+		}
 
-        return "signup";
-    }
+		return "signup";
+	}
 
-    @PostMapping("/signup")
-    public String handleSignup(String email,
-                               String password,
-                               Model model,
-                               RedirectAttributes redirectAttributes) {
+	@PostMapping("/signup")
+	public String handleSignup(String email, String password, Model model, RedirectAttributes redirectAttributes) {
 
-        String result = authService.signup(email, password);
+		String result = authService.signup(email, password);
 
-        if (result.equals("Signup successful")) {
+		if (result.equals("Signup successful")) {
 
-            redirectAttributes.addFlashAttribute("message",
-                    "Account created successfully. Please sign in.");
-            redirectAttributes.addFlashAttribute("isSuccess", true);
+			redirectAttributes.addFlashAttribute("message", "Account created successfully. Please sign in.");
+			redirectAttributes.addFlashAttribute("isSuccess", true);
 
-            return "redirect:/login";
-        }
+			return "redirect:/login";
+		}
 
-        model.addAttribute("message", result);
-        model.addAttribute("isSuccess", false);
+		model.addAttribute("message", result);
+		model.addAttribute("isSuccess", false);
 
-        return "signup";
-    }
+		return "signup";
+	}
 
-    @PostMapping("/login")
-    public String handleLogin(String email,
-                              String password,
-                              HttpSession session,
-                              Model model) {
+	@PostMapping("/login")
+	public String handleLogin(String email, String password, HttpSession session, Model model) {
 
-        String result = authService.login(email, password);
+		User user = authService.login(email, password);
+		if (user != null) {
+			session.setAttribute("loggedInUser", user);
+			return "redirect:/dashboard";
+		}
+		model.addAttribute("message", "Credentials are wrong");
+		model.addAttribute("isSuccess", false);
+		return "login";
+	}
 
-        if (result.equals("Login successful")) {
+	@GetMapping("/dashboard")
+	public String dashboard(HttpSession session, Model model) {
 
-            session.setAttribute("loggedInUser", email);
+		// Prevent access without login
+		if (session.getAttribute("loggedInUser") == null) {
+			return "redirect:/login";
+		}
 
-            return "redirect:/dashboard";
-        }
+		User user = (User) session.getAttribute("loggedInUser");
 
-        model.addAttribute("message", "Credentials are wrong");
-        model.addAttribute("isSuccess", false);
+		List<MoneyVo> entries = moneyService.getAllDetails(user);
 
-        return "login";
-    }
+		float total = moneyService.totalAmount(user);
 
-    @GetMapping("/dashboard")
-    public String dashboard(HttpSession session, Model model) {
+		model.addAttribute("entries", entries);
+		model.addAttribute("total", total);
+		model.addAttribute("moneyVo", new MoneyVo());
 
-        // Prevent access without login
-        if (session.getAttribute("loggedInUser") == null) {
-            return "redirect:/login";
-        }
+		return "dashboard";
+	}
 
-        List<MoneyVo> entries = moneyService.getAllDetails();
+	@PostMapping("/entries")
+	public String saveEntry(@ModelAttribute MoneyVo moneyVo, HttpSession session) {
 
-        float total = moneyService.totalAmount();
+		if (session.getAttribute("loggedInUser") == null) {
+			return "redirect:/login";
+		}
 
-        float average = entries.isEmpty() ? 0f : total / entries.size();
+		User user = (User) session.getAttribute("loggedInUser");
+		moneyVo.setUser(user);
+		moneyService.insertDetails(moneyVo);
+		return "redirect:/dashboard";
+	}
 
-        model.addAttribute("entries", entries);
-        model.addAttribute("total", total);
-        model.addAttribute("average", average);
-        model.addAttribute("moneyVo", new MoneyVo());
+	@GetMapping("/entries/{id}/edit")
+	public String editEntry(@PathVariable Integer id, HttpSession session, Model model) {
 
-        return "dashboard";
-    }
+		if (session.getAttribute("loggedInUser") == null) {
+			return "redirect:/login";
+		}
 
-    @PostMapping("/entries")
-    public String saveEntry(@ModelAttribute MoneyVo moneyVo,
-                            HttpSession session) {
+		User user = (User) session.getAttribute("loggedInUser");
 
-        if (session.getAttribute("loggedInUser") == null) {
-            return "redirect:/login";
-        }
+		List<MoneyVo> entries = moneyService.getAllDetails(user);
 
-        moneyService.insertDetails(moneyVo);
+		MoneyVo selected = entries.stream().filter(entry -> id.equals(entry.getId())).findFirst().orElse(null);
 
-        return "redirect:/dashboard";
-    }
+		float total = moneyService.totalAmount(user);
 
-    @GetMapping("/entries/{id}/edit")
-    public String editEntry(@PathVariable Integer id,
-                            HttpSession session,
-                            Model model) {
+		model.addAttribute("entries", entries);
+		model.addAttribute("moneyVo", selected);
+		model.addAttribute("total", total);
+		model.addAttribute("average", entries.isEmpty() ? 0f : total / entries.size());
 
-        if (session.getAttribute("loggedInUser") == null) {
-            return "redirect:/login";
-        }
+		return "dashboard";
+	}
 
-        List<MoneyVo> entries = moneyService.getAllDetails();
+	@PostMapping("/entries/{id}/update")
+	public String updateEntry(@PathVariable Integer id, @ModelAttribute MoneyVo moneyVo, HttpSession session) {
 
-        MoneyVo selected = entries.stream()
-                .filter(entry -> id.equals(entry.getId()))
-                .findFirst()
-                .orElse(null);
+		if (session.getAttribute("loggedInUser") == null) {
+			return "redirect:/login";
+		}
 
-        float total = moneyService.totalAmount();
+		moneyVo.setId(id);
+		User user = (User) session.getAttribute("loggedInUser");
+		moneyVo.setUser(user);
 
-        model.addAttribute("entries", entries);
-        model.addAttribute("moneyVo", selected);
-        model.addAttribute("total", total);
-        model.addAttribute("average", entries.isEmpty() ? 0f : total / entries.size());
+		moneyService.updateDetails(moneyVo);
 
-        return "dashboard";
-    }
+		return "redirect:/dashboard";
+	}
 
-    @PostMapping("/entries/{id}/update")
-    public String updateEntry(@PathVariable Integer id,
-                              @ModelAttribute MoneyVo moneyVo,
-                              HttpSession session) {
+	@PostMapping("/entries/{id}/delete")
+	public String deleteEntry(@PathVariable Integer id, HttpSession session) {
 
-        if (session.getAttribute("loggedInUser") == null) {
-            return "redirect:/login";
-        }
+		if (session.getAttribute("loggedInUser") == null) {
+			return "redirect:/login";
+		}
+		
+		moneyService.deleteDetails(id);
 
-        moneyVo.setId(id);
+		return "redirect:/dashboard";
+	}
 
-        moneyService.updateDetails(moneyVo);
+	@GetMapping("/logout")
+	public String logout(HttpSession session) {
 
-        return "redirect:/dashboard";
-    }
+		session.invalidate();
 
-    @PostMapping("/entries/{id}/delete")
-    public String deleteEntry(@PathVariable Integer id,
-                              HttpSession session) {
-
-        if (session.getAttribute("loggedInUser") == null) {
-            return "redirect:/login";
-        }
-
-        moneyService.deleteDetails(id);
-
-        return "redirect:/dashboard";
-    }
-
-    @GetMapping("/logout")
-    public String logout(HttpSession session) {
-
-        session.invalidate();
-
-        return "redirect:/login";
-    }
+		return "redirect:/login";
+	}
 
 }
