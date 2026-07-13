@@ -1,0 +1,51 @@
+name: Build and Deploy Spring Boot
+
+on:
+  push:
+    branches:
+      - Test
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ROLE_ARN: arn:aws:iam::170928836252:role/calculator-app-github-deploy-role
+  S3_BUCKET: money-cal-app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build Project
+        run: mvn clean package -DskipTests
+
+      - name: Configure AWS Credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.ROLE_ARN }}
+
+      - name: Upload JAR to S3
+        run: |
+          aws s3 cp target/*.jar s3://${{ env.S3_BUCKET }}/app.jar
+
+      - name: Deploy to EC2 via SSM
+        run: |
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Name,Values=calculator-app-frontend-01,calculator-app-frontend-02" \
+            --parameters '{"commands":["set -euo pipefail","mkdir -p /opt/app","aws s3 cp s3://${{ env.S3_BUCKET }}/app.jar /opt/app/app.jar","systemctl daemon-reload","systemctl enable calculator-app.service","systemctl restart calculator-app.service","systemctl is-active --quiet calculator-app.service"]}' \
+            --region ${{ env.AWS_REGION }}
